@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal AI Agent Chat</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; height: 85vh; }
+        .chat-header { background: #007bff; color: white; padding: 15px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .client-selector { font-size: 14px; padding: 5px; border-radius: 5px; border: none; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
+        .message { max-width: 75%; padding: 12px 16px; border-radius: 10px; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; }
+        .user-message { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bot-message { background: #e4e6eb; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-input-area { display: flex; padding: 15px; background: white; border-top: 1px solid #ddd; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
+        .chat-input-area button { background: #007bff; color: white; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .chat-input-area button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <span>🤖 Universal AI Chat</span>
+        <select id="clientSlug" class="client-selector">
+            <option value="dental_clinic">Dental Clinic</option>
+            <!-- Aap mazeed clients yahan add kar sakte hain -->
+        </select>
+    </div>
+    
+    <div id="chatMessages" class="chat-messages">
+        <div class="message bot-message">Hello! Select a business profile and start chatting with your local AI agent.</div>
+    </div>
+    
+    <div class="chat-input-area">
+        <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById("userInput");
+        const message = inputField.value.trim();
+        const clientSlug = document.getElementById("clientSlug").value;
+        const chatMessages = document.getElementById("chatMessages");
+
+        if (!message) return;
+
+        // Display User Message
+        chatMessages.innerHTML += `<div class="message user-message">${escapeHtml(message)}</div>`;
+        inputField.value = "";
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Display Loading or Thinking State
+        const loadingId = "loading-" + Date.now();
+        chatMessages.innerHTML += `<div id="${loadingId}" class="message bot-message" style="color: #666; font-style: italic;">Thinking...</div>`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ client_slug: clientSlug, message: message })
+            });
+
+            const data = await response.json();
+            document.getElementById(loadingId).remove();
+
+            if (response.ok) {
+                chatMessages.innerHTML += `<div class="message bot-message"><b>${data.business_name}:</b><br>${escapeHtml(data.response)}</div>`;
+            } else {
+                chatMessages.innerHTML += `<div class="message bot-message" style="color: red;">Error: ${data.detail || "Something went wrong"}</div>`;
+            }
+        } catch (error) {
+            document.getElementById(loadingId).remove();
+            chatMessages.innerHTML += `<div class="message bot-message" style="color: red;">Failed to connect to server.</div>`;
+        }
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>
+
+</body>
+</html>
